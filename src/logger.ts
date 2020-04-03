@@ -40,27 +40,33 @@ class logger implements Logger {
   }
 
   log(level: string, message: string, meta?: object) {
-    this.backend.log(level, message, meta)
+    if (meta && (meta instanceof Error || (meta as any).stack)) {
+      this.backend.log(level, message, {
+        stacktrace: (meta as any).stack, panic: (meta as any).message
+      })
+    } else {
+      this.backend.log(level, message, meta)
+    }
   }
 
   debug(message: string, meta?: object) {
-    this.backend.debug(message, meta)
+    this.log('debug', message, meta)
   }
   
   info(message: string, meta?: object) {
-    this.backend.info(message, meta)
+    this.log('info', message, meta)
   }
   
   warn(message: string, meta?: object) {
-    this.backend.warn(message, meta)
+    this.log('warn', message, meta)
   }
   
   error(message: string, meta?: object) {
-    this.backend.error(message, meta)
+    this.log('error', message, meta)
   }
   
   critical(message: string, meta?: object) {
-    this.backend.log('critical', message, meta)
+    this.log('critical', message, meta)
   }
 }
 

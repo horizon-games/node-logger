@@ -10,22 +10,29 @@ class logger {
         return createLogEntry(this, fields);
     }
     log(level, message, meta) {
-        this.backend.log(level, message, meta);
+        if (meta && (meta instanceof Error || meta.stack)) {
+            this.backend.log(level, message, {
+                stacktrace: meta.stack, panic: meta.message
+            });
+        }
+        else {
+            this.backend.log(level, message, meta);
+        }
     }
     debug(message, meta) {
-        this.backend.debug(message, meta);
+        this.log('debug', message, meta);
     }
     info(message, meta) {
-        this.backend.info(message, meta);
+        this.log('info', message, meta);
     }
     warn(message, meta) {
-        this.backend.warn(message, meta);
+        this.log('warn', message, meta);
     }
     error(message, meta) {
-        this.backend.error(message, meta);
+        this.log('error', message, meta);
     }
     critical(message, meta) {
-        this.backend.log('critical', message, meta);
+        this.log('critical', message, meta);
     }
 }
 exports.createLogger = (config) => {

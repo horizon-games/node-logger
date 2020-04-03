@@ -60,7 +60,7 @@ export const requestLogger = (logger: Logger) => (req, res, next) => {
   let message = ''
   if (verbose) {
     // Verbose-mode -- small message as data is in the entry
-    message = `Response: ${statusLabel(res.statusCode)}`
+    message = `Response: ${res.statusCode} ${statusLabel(res.statusCode)}`
 
   } else {
     // Concise-mode -- pack the info in this message
