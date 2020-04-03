@@ -9,6 +9,7 @@ export interface Config {
 export interface Logger extends winston.Logger {
     config: Config;
     createEntry(fields?: object): LogEntry;
+    critical(message: string, ...meta: any[]): winston.Logger;
 }
 export interface LogEntry {
     fields: object;
@@ -19,5 +20,6 @@ export interface LogEntry {
     info(message: string): any;
     warn(message: string): any;
     error(message: string): any;
+    critical(message: string): any;
 }
 export declare const createLogger: (config: Config) => Logger;

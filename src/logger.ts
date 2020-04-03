@@ -11,6 +11,7 @@ export interface Config {
 export interface Logger extends winston.Logger {
   config: Config
   createEntry(fields?: object): LogEntry
+  critical(message: string, ...meta: any[]): winston.Logger
 }
 
 export interface LogEntry {
@@ -22,6 +23,7 @@ export interface LogEntry {
   info(message: string)
   warn(message: string)
   error(message: string)
+  critical(message: string)
 }
 
 export const createLogger = (config: Config): Logger => {
@@ -35,7 +37,14 @@ export const createLogger = (config: Config): Logger => {
   }
 
   const logger = <Logger>winston.createLogger({
-    level: config.level,
+    level: config.level || 'info',
+    levels: { 
+      critical: 0, 
+      error: 1, 
+      warn: 2, 
+      info: 3, 
+      debug: 4
+    },
     defaultMeta: meta,
     format: winston.format.combine(
       winston.format.timestamp()
@@ -51,7 +60,7 @@ export const createLogger = (config: Config): Logger => {
   } else {
     logger.add(new winston.transports.Console({
       format: winston.format.combine(
-        winston.format.colorize(),
+        winston.format.colorize({ colors: { 'critical': 'red' } }),
         winston.format.simple()
       )
     }))
@@ -59,6 +68,10 @@ export const createLogger = (config: Config): Logger => {
 
   logger.config = config
   logger.createEntry = (fields: object) => createLogEntry(logger, fields)
+  logger.critical = (message: string, ...meta: any[]) => {
+    logger.log('critical', message, ...meta)
+    return logger
+  }
 
   return logger
 }
@@ -73,9 +86,9 @@ const createLogEntry = (logger: Logger, fields: object): LogEntry => {
       return this.fields[k]
     },
     log: function(level: string, message: string) {
-      if (logger.config.concise !== true) {
-        this.fields['severity'] = level
-      }
+      // if (logger.config.concise !== true) {
+      //   this.fields['severity'] = level
+      // }
       logger.log(level, message, this.fields)
     },
     debug: function(message: string) {
@@ -89,6 +102,9 @@ const createLogEntry = (logger: Logger, fields: object): LogEntry => {
     },
     error: function(message: string) {
       this.log('error', message)
+    },
+    critical: function(message: string) {
+      this.log('critical', message)
     }
   }
 }

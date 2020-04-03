@@ -10,7 +10,14 @@ exports.createLogger = (config) => {
         meta = { ...config.tags, ...meta };
     }
     const logger = winston.createLogger({
-        level: config.level,
+        level: config.level || 'info',
+        levels: {
+            critical: 0,
+            error: 1,
+            warn: 2,
+            info: 3,
+            debug: 4
+        },
         defaultMeta: meta,
         format: winston.format.combine(winston.format.timestamp())
     });
@@ -21,11 +28,15 @@ exports.createLogger = (config) => {
     }
     else {
         logger.add(new winston.transports.Console({
-            format: winston.format.combine(winston.format.colorize(), winston.format.simple())
+            format: winston.format.combine(winston.format.colorize({ colors: { 'critical': 'red' } }), winston.format.simple())
         }));
     }
     logger.config = config;
     logger.createEntry = (fields) => createLogEntry(logger, fields);
+    logger.critical = (message, ...meta) => {
+        logger.log('critical', message, ...meta);
+        return logger;
+    };
     return logger;
 };
 const createLogEntry = (logger, fields) => {
@@ -38,9 +49,9 @@ const createLogEntry = (logger, fields) => {
             return this.fields[k];
         },
         log: function (level, message) {
-            if (logger.config.concise !== true) {
-                this.fields['severity'] = level;
-            }
+            // if (logger.config.concise !== true) {
+            //   this.fields['severity'] = level
+            // }
             logger.log(level, message, this.fields);
         },
         debug: function (message) {
@@ -54,6 +65,9 @@ const createLogEntry = (logger, fields) => {
         },
         error: function (message) {
             this.log('error', message);
+        },
+        critical: function (message) {
+            this.log('critical', message);
         }
     };
 };

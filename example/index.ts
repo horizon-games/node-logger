@@ -3,8 +3,9 @@ import { createLogger, requestLogger, requestRecoverer, getLogEntry } from '@hor
 
 const logger = createLogger({
   service: 'example',
-  // json: true,
-  concise: true,
+  level: 'info',
+  json: true,
+  // concise: true,
   tags: { 'version': 'v0.1' }
 })
 
