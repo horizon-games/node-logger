@@ -14,7 +14,7 @@ app.use(requestLogger(logger))
 
 app.get('/', (req, res) => {
   const logEntry = getLogEntry(req)
-  logEntry.info('logging some action from within the handler, yeay')
+  logEntry.info('logging some action from within the handler, yeay', { details: 123 })
 
   res.status(200).send('welcome')
 })

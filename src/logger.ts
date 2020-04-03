@@ -8,22 +8,60 @@ export interface Config {
   tags?: object
 }
 
-export interface Logger extends winston.Logger {
+export interface Logger {
   config: Config
+  backend: winston.Logger
   createEntry(fields?: object): LogEntry
-  critical(message: string, ...meta: any[]): winston.Logger
+  log(level: string, message: string, meta?: object)
+  debug(message: string, meta?: object)
+  info(message: string, meta?: object)
+  warn(message: string, meta?: object)
+  error(message: string, meta?: object)
+  critical(message: string, meta?: object)
 }
 
 export interface LogEntry {
   fields: object
   set(k: string, v: object)
   get(k: string)
-  log(level: string, message: string)
-  debug(message: string)
-  info(message: string)
-  warn(message: string)
-  error(message: string)
-  critical(message: string)
+  log(level: string, message: string, meta?: object)
+  debug(message: string, meta?: object)
+  info(message: string, meta?: object)
+  warn(message: string, meta?: object)
+  error(message: string, meta?: object)
+  critical(message: string, meta?: object)
+}
+
+class logger implements Logger {
+  constructor(public config: Config, public backend: winston.Logger) {}
+
+  createEntry(fields?: object): LogEntry {
+    return createLogEntry(this, fields)
+  }
+
+  log(level: string, message: string, meta?: object) {
+    this.backend.log(level, message, meta)
+  }
+
+  debug(message: string, meta?: object) {
+    this.backend.debug(message, meta)
+  }
+  
+  info(message: string, meta?: object) {
+    this.backend.info(message, meta)
+  }
+  
+  warn(message: string, meta?: object) {
+    this.backend.warn(message, meta)
+  }
+  
+  error(message: string, meta?: object) {
+    this.backend.error(message, meta)
+  }
+  
+  critical(message: string, meta?: object) {
+    this.backend.log('critical', message, meta)
+  }
 }
 
 export const createLogger = (config: Config): Logger => {
@@ -36,7 +74,7 @@ export const createLogger = (config: Config): Logger => {
     meta = { ...config.tags, ...meta }
   }
 
-  const logger = <Logger>winston.createLogger({
+  const backend = winston.createLogger({
     level: config.level || 'info',
     levels: { 
       critical: 0, 
@@ -52,13 +90,13 @@ export const createLogger = (config: Config): Logger => {
   })
 
   if (config.json === true) {
-    logger.add(new winston.transports.Console({
+    backend.add(new winston.transports.Console({
       format: winston.format.combine(
         winston.format.json()
       )
     }))
   } else {
-    logger.add(new winston.transports.Console({
+    backend.add(new winston.transports.Console({
       format: winston.format.combine(
         winston.format.colorize({ colors: { 'critical': 'red' } }),
         winston.format.simple()
@@ -66,14 +104,7 @@ export const createLogger = (config: Config): Logger => {
     }))
   }
 
-  logger.config = config
-  logger.createEntry = (fields: object) => createLogEntry(logger, fields)
-  logger.critical = (message: string, ...meta: any[]) => {
-    logger.log('critical', message, ...meta)
-    return logger
-  }
-
-  return logger
+  return new logger(config, backend)
 }
 
 const createLogEntry = (logger: Logger, fields: object): LogEntry => {
@@ -85,26 +116,30 @@ const createLogEntry = (logger: Logger, fields: object): LogEntry => {
     get: function(k: string): object {
       return this.fields[k]
     },
-    log: function(level: string, message: string) {
+    log: function(level: string, message: string, meta?: object) {
       // if (logger.config.concise !== true) {
       //   this.fields['severity'] = level
       // }
-      logger.log(level, message, this.fields)
+      if (meta !== undefined) {
+        logger.log(level, message, { ...this.fields, ...meta })
+      } else {
+        logger.log(level, message, this.fields)
+      }
     },
-    debug: function(message: string) {
-      this.log('debug', message)
+    debug: function(message: string, meta?: object) {
+      this.log('debug', message, meta)
     },
-    info: function(message: string) {
-      this.log('info', message)
+    info: function(message: string, meta?: object) {
+      this.log('info', message, meta)
     },
-    warn: function(message: string) {
-      this.log('warn', message)
+    warn: function(message: string, meta?: object) {
+      this.log('warn', message, meta)
     },
-    error: function(message: string) {
-      this.log('error', message)
+    error: function(message: string, meta?: object) {
+      this.log('error', message, meta)
     },
-    critical: function(message: string) {
-      this.log('critical', message)
+    critical: function(message: string, meta?: object) {
+      this.log('critical', message, meta)
     }
   }
 }

@@ -6,20 +6,26 @@ export interface Config {
     concise?: boolean;
     tags?: object;
 }
-export interface Logger extends winston.Logger {
+export interface Logger {
     config: Config;
+    backend: winston.Logger;
     createEntry(fields?: object): LogEntry;
-    critical(message: string, ...meta: any[]): winston.Logger;
+    log(level: string, message: string, meta?: object): any;
+    debug(message: string, meta?: object): any;
+    info(message: string, meta?: object): any;
+    warn(message: string, meta?: object): any;
+    error(message: string, meta?: object): any;
+    critical(message: string, meta?: object): any;
 }
 export interface LogEntry {
     fields: object;
     set(k: string, v: object): any;
     get(k: string): any;
-    log(level: string, message: string): any;
-    debug(message: string): any;
-    info(message: string): any;
-    warn(message: string): any;
-    error(message: string): any;
-    critical(message: string): any;
+    log(level: string, message: string, meta?: object): any;
+    debug(message: string, meta?: object): any;
+    info(message: string, meta?: object): any;
+    warn(message: string, meta?: object): any;
+    error(message: string, meta?: object): any;
+    critical(message: string, meta?: object): any;
 }
 export declare const createLogger: (config: Config) => Logger;
