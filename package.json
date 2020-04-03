@@ -1,0 +1,38 @@
+{
+  "name": "@horizon/node-logger",
+  "version": "1.0.0",
+  "description": "Node logger",
+  "author": "Peter Kieltyka",
+  "homepage": "https://github.com/horizon-games/node-logger",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "directories": {},
+  "engines": {
+    "node": ">=10.4"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "./node_modules/.bin/rimraf dist && ./node_modules/.bin/tsc -p ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/horizon-games/node-logger"
+  },
+  "dependencies": {
+    "uuid": "^7.0.3",
+    "winston": "^3.2.1"
+  },
+  "peerDependencies": {
+    "express": "^4.17.1"
+  },
+  "devDependencies": {
+    "@types/node": "^13.11.0",
+    "@types/winston": "^2.4.4",
+    "rimraf": "^3.0.2",
+    "ts-node": "^8.8.1",
+    "typescript": "^3.8.3"
+  }
+}
