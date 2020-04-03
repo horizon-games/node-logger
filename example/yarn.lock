@@ -2,7 +2,7 @@
 # yarn lockfile v1
 
 
-"@horizon/node-logger@../":
+"@horizongames/node-logger@../":
   version "1.0.0"
   dependencies:
     uuid "^7.0.3"

@@ -1,5 +1,5 @@
 import * as express from 'express'
-import { createLogger, requestLogger, requestRecoverer, getLogEntry } from '@horizon/node-logger'
+import { createLogger, requestLogger, requestRecoverer, getLogEntry } from '@horizongames/node-logger'
 
 const logger = createLogger({
   service: 'example',
@@ -14,7 +14,7 @@ app.use(requestLogger(logger))
 app.get('/', (req, res) => {
   const logEntry = getLogEntry(req)
   logEntry.info('logging some action from within the handler, yeay')
-  
+
   res.status(200).send('welcome')
 })
 

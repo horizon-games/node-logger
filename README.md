@@ -6,7 +6,7 @@ and built-in express.js requestLogger and exception recovery middlewares.
 
 ## Install
 
-`npm install @horizon/node-logger`
+`npm install @horizongames/node-logger`
 
 
 ## Usage
@@ -16,6 +16,8 @@ For a combined example, see the [_example](./_example/index.ts) project.
 **Logger:**
 
 ```ts
+import { createLogger } from '@horizongames/node-logger'
+
 // Setup a new logger passing a custom config (see logger.ts Config type for info)
 const logger = createLogger({
   service: 'my-service',
