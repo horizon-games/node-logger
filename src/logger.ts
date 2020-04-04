@@ -12,24 +12,24 @@ export interface Logger {
   config: Config
   backend: winston.Logger
   createEntry(fields?: object): LogEntry
-  log(level: string, message: string, meta?: object)
-  debug(message: string, meta?: object)
-  info(message: string, meta?: object)
-  warn(message: string, meta?: object)
-  error(message: string, meta?: object)
-  critical(message: string, meta?: object)
+  log(level: string, message: string, ...fields: object[])
+  debug(message: string, ...fields: object[])
+  info(message: string, ...fields: object[])
+  warn(message: string, ...fields: object[])
+  error(message: string, ...fields: object[])
+  critical(message: string, ...fields: object[])
 }
 
 export interface LogEntry {
   fields: object
   set(k: string, v: object)
   get(k: string)
-  log(level: string, message: string, meta?: object)
-  debug(message: string, meta?: object)
-  info(message: string, meta?: object)
-  warn(message: string, meta?: object)
-  error(message: string, meta?: object)
-  critical(message: string, meta?: object)
+  log(level: string, message: string, ...fields: object[])
+  debug(message: string, ...fields: object[])
+  info(message: string, ...fields: object[])
+  warn(message: string, ...fields: object[])
+  error(message: string, ...fields: object[])
+  critical(message: string, ...fields: object[])
 }
 
 class logger implements Logger {
@@ -39,34 +39,44 @@ class logger implements Logger {
     return createLogEntry(this, fields)
   }
 
-  log(level: string, message: string, meta?: object) {
-    if (meta && (meta instanceof Error || (meta as any).stack)) {
-      this.backend.log(level, message, {
-        stacktrace: (meta as any).stack, panic: (meta as any).message
-      })
-    } else {
-      this.backend.log(level, message, meta)
+  log(level: string, message: string, ...fields: object[]) {
+    let meta = {}
+    if (fields && fields.length > 0) {
+      for (let i = 0; i < fields.length; i++) {
+        const field = fields[i]
+        if (field && (field instanceof Error || (field as any).stack)) {
+          if (level !== 'warn' && level != 'error' && level !== 'critical') {
+            level = 'error'
+          }
+          meta = { ...meta, ...{ 
+            stacktrace: (field as any).stack, panic: (field as any).message 
+          } }
+        } else {
+          meta = { ...meta, ...field }
+        }
+      }
     }
+    this.backend.log(level, message, meta)
   }
 
-  debug(message: string, meta?: object) {
-    this.log('debug', message, meta)
+  debug(message: string, ...fields: object[]) {
+    this.log('debug', message, ...fields)
   }
   
-  info(message: string, meta?: object) {
-    this.log('info', message, meta)
+  info(message: string, ...fields: object[]) {
+    this.log('info', message, ...fields)
   }
   
-  warn(message: string, meta?: object) {
-    this.log('warn', message, meta)
+  warn(message: string, ...fields: object[]) {
+    this.log('warn', message, ...fields)
   }
   
-  error(message: string, meta?: object) {
-    this.log('error', message, meta)
+  error(message: string, ...fields: object[]) {
+    this.log('error', message, ...fields)
   }
   
-  critical(message: string, meta?: object) {
-    this.log('critical', message, meta)
+  critical(message: string, ...fields: object[]) {
+    this.log('critical', message, ...fields)
   }
 }
 
@@ -122,30 +132,30 @@ const createLogEntry = (logger: Logger, fields: object): LogEntry => {
     get: function(k: string): object {
       return this.fields[k]
     },
-    log: function(level: string, message: string, meta?: object) {
+    log: function(level: string, message: string, ...fields: object[]) {
       // if (logger.config.concise !== true) {
       //   this.fields['severity'] = level
       // }
-      if (meta !== undefined) {
-        logger.log(level, message, { ...this.fields, ...meta })
+      if (fields && fields.length > 0) {
+        logger.log(level, message, ...[ this.fields, ...fields ])
       } else {
         logger.log(level, message, this.fields)
       }
     },
-    debug: function(message: string, meta?: object) {
-      this.log('debug', message, meta)
+    debug: function(message: string, ...fields: object[]) {
+      this.log('debug', message, ...fields)
     },
-    info: function(message: string, meta?: object) {
-      this.log('info', message, meta)
+    info: function(message: string, ...fields: object[]) {
+      this.log('info', message, ...fields)
     },
-    warn: function(message: string, meta?: object) {
-      this.log('warn', message, meta)
+    warn: function(message: string, ...fields: object[]) {
+      this.log('warn', message, ...fields)
     },
-    error: function(message: string, meta?: object) {
-      this.log('error', message, meta)
+    error: function(message: string, ...fields: object[]) {
+      this.log('error', message, ...fields)
     },
-    critical: function(message: string, meta?: object) {
-      this.log('critical', message, meta)
+    critical: function(message: string, ...fields: object[]) {
+      this.log('critical', message, ...fields)
     }
   }
 }

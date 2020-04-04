@@ -9,30 +9,40 @@ class logger {
     createEntry(fields) {
         return createLogEntry(this, fields);
     }
-    log(level, message, meta) {
-        if (meta && (meta instanceof Error || meta.stack)) {
-            this.backend.log(level, message, {
-                stacktrace: meta.stack, panic: meta.message
-            });
+    log(level, message, ...fields) {
+        let meta = {};
+        if (fields && fields.length > 0) {
+            for (let i = 0; i < fields.length; i++) {
+                const field = fields[i];
+                if (field && (field instanceof Error || field.stack)) {
+                    if (level !== 'warn' && level != 'error' && level !== 'critical') {
+                        level = 'error';
+                    }
+                    meta = { ...meta, ...{
+                            stacktrace: field.stack, panic: field.message
+                        } };
+                }
+                else {
+                    meta = { ...meta, ...field };
+                }
+            }
         }
-        else {
-            this.backend.log(level, message, meta);
-        }
+        this.backend.log(level, message, meta);
     }
-    debug(message, meta) {
-        this.log('debug', message, meta);
+    debug(message, ...fields) {
+        this.log('debug', message, ...fields);
     }
-    info(message, meta) {
-        this.log('info', message, meta);
+    info(message, ...fields) {
+        this.log('info', message, ...fields);
     }
-    warn(message, meta) {
-        this.log('warn', message, meta);
+    warn(message, ...fields) {
+        this.log('warn', message, ...fields);
     }
-    error(message, meta) {
-        this.log('error', message, meta);
+    error(message, ...fields) {
+        this.log('error', message, ...fields);
     }
-    critical(message, meta) {
-        this.log('critical', message, meta);
+    critical(message, ...fields) {
+        this.log('critical', message, ...fields);
     }
 }
 exports.createLogger = (config) => {
@@ -76,31 +86,31 @@ const createLogEntry = (logger, fields) => {
         get: function (k) {
             return this.fields[k];
         },
-        log: function (level, message, meta) {
+        log: function (level, message, ...fields) {
             // if (logger.config.concise !== true) {
             //   this.fields['severity'] = level
             // }
-            if (meta !== undefined) {
-                logger.log(level, message, { ...this.fields, ...meta });
+            if (fields && fields.length > 0) {
+                logger.log(level, message, ...[this.fields, ...fields]);
             }
             else {
                 logger.log(level, message, this.fields);
             }
         },
-        debug: function (message, meta) {
-            this.log('debug', message, meta);
+        debug: function (message, ...fields) {
+            this.log('debug', message, ...fields);
         },
-        info: function (message, meta) {
-            this.log('info', message, meta);
+        info: function (message, ...fields) {
+            this.log('info', message, ...fields);
         },
-        warn: function (message, meta) {
-            this.log('warn', message, meta);
+        warn: function (message, ...fields) {
+            this.log('warn', message, ...fields);
         },
-        error: function (message, meta) {
-            this.log('error', message, meta);
+        error: function (message, ...fields) {
+            this.log('error', message, ...fields);
         },
-        critical: function (message, meta) {
-            this.log('critical', message, meta);
+        critical: function (message, ...fields) {
+            this.log('critical', message, ...fields);
         }
     };
 };
