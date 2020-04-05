@@ -11,7 +11,8 @@ export interface Config {
 export interface Logger {
   config: Config
   backend: winston.Logger
-  createEntry(fields?: object): LogEntry
+  createEntry(defaultPath?: string): LogEntry
+  write(level: string, message: string, path: string | null, ...fields: object[])
   log(level: string, message: string, ...fields: object[])
   debug(message: string, ...fields: object[])
   info(message: string, ...fields: object[])
@@ -21,9 +22,10 @@ export interface Logger {
 }
 
 export interface LogEntry {
+  defaultPath: string | null
   fields: object
-  set(k: string, v: object)
-  get(k: string)
+  set(k: string, v: any, defaultPath?: boolean)
+  get(k: string, defaultPath?: boolean): any
   log(level: string, message: string, ...fields: object[])
   debug(message: string, ...fields: object[])
   info(message: string, ...fields: object[])
@@ -32,15 +34,24 @@ export interface LogEntry {
   critical(message: string, ...fields: object[])
 }
 
+const defaultFieldsPath = 'context'
+
 class logger implements Logger {
   constructor(public config: Config, public backend: winston.Logger) {}
 
-  createEntry(fields?: object): LogEntry {
-    return createLogEntry(this, fields)
+  createEntry(defaultPath?: string): LogEntry {
+    if (defaultPath === undefined) {
+      defaultPath = defaultFieldsPath
+    }
+    // * null path means default value
+    // * '' (empty) path means root
+    // * 'something' path means a /something path
+    return createLogEntry(this, defaultPath)
   }
 
-  log(level: string, message: string, ...fields: object[]) {
-    let meta = {}
+  write(level: string, message: string, path: string | null, ...fields: object[]) {
+    let meta = null
+    let err: Error = null
     if (fields && fields.length > 0) {
       for (let i = 0; i < fields.length; i++) {
         const field = fields[i]
@@ -48,15 +59,24 @@ class logger implements Logger {
           if (level !== 'warn' && level != 'error' && level !== 'critical') {
             level = 'error'
           }
-          meta = { ...meta, ...{ 
-            stacktrace: (field as any).stack, panic: (field as any).message 
-          } }
+          err = field as Error
         } else {
           meta = { ...meta, ...field }
         }
       }
+      if (path !== null && path !== '') {
+        meta = { [path]: { ...meta } }
+      }
+    }
+    if (err !== null) {
+      meta['stacktrace'] = err.stack
+      meta['panic'] = err.message
     }
     this.backend.log(level, message, meta)
+  }
+
+  log(level: string, message: string, ...fields: object[]) {
+    this.write(level, message, defaultFieldsPath, ...fields)
   }
 
   debug(message: string, ...fields: object[]) {
@@ -123,23 +143,33 @@ export const createLogger = (config: Config): Logger => {
   return new logger(config, backend)
 }
 
-const createLogEntry = (logger: Logger, fields: object): LogEntry => {
+const createLogEntry = (logger: Logger, defaultPath: string | null): LogEntry => {
   return {
-    fields: fields || {},
-    set: function(k: string, v: object) {
-      this.fields[k] = v
+    defaultPath: defaultPath,
+    fields: {},
+    set: function(k: string, v: any, defaultPath?: boolean) {
+      if (defaultPath !== false) {
+        if (!this.fields[this.defaultPath]) {
+          this.fields[this.defaultPath] = {}
+        }
+        this.fields[this.defaultPath][k] = v
+      } else {
+        this.fields[k] = v
+      }
     },
-    get: function(k: string): object {
-      return this.fields[k]
+    
+    get: function(k: string, defaultPath?: boolean): any {
+      if (defaultPath !== false) {
+        return this.fields[this.defaultPath][k]
+      } else {
+        return this.fields[k]
+      }
     },
     log: function(level: string, message: string, ...fields: object[]) {
-      // if (logger.config.concise !== true) {
-      //   this.fields['severity'] = level
-      // }
       if (fields && fields.length > 0) {
-        logger.log(level, message, ...[ this.fields, ...fields ])
+        logger.write(level, message, '', ...[ this.fields, ...fields ])
       } else {
-        logger.log(level, message, this.fields)
+        logger.write(level, message, '', this.fields)
       }
     },
     debug: function(message: string, ...fields: object[]) {

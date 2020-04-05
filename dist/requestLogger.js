@@ -29,7 +29,7 @@ exports.requestLogger = (logger) => (req, res, next) => {
         if (httpRequest['headers']['set-cookie'] && httpRequest['headers']['set-cookie'] !== '') {
             httpRequest['headers']['set-cookie'] = '***';
         }
-        entry.set('httpRequest', httpRequest);
+        entry.set('httpRequest', httpRequest, false);
     }
     const startAt = process.hrtime();
     setLogEntry(req, entry);
@@ -44,7 +44,7 @@ exports.requestLogger = (logger) => (req, res, next) => {
             status: res.statusCode,
             elapsed: elapsedMs
         };
-        entry.set('httpResponse', httpResponse);
+        entry.set('httpResponse', httpResponse, false);
     }
     // Log the request & response
     let message = '';
@@ -57,6 +57,7 @@ exports.requestLogger = (logger) => (req, res, next) => {
         // message = `${res.statusCode} ${statusLabel(res.statusCode)} - ${req.method} ${req.originalUrl}`
         message = `"${req.method} ${req.originalUrl}" - ${res.statusCode} ${statusLabel(res.statusCode)} in ${elapsedMs}ms`;
     }
+    // entry.write(statusLevel(res.statusCode), message, false)
     entry.log(statusLevel(res.statusCode), message);
 };
 exports.getLogEntry = (req) => {
@@ -74,8 +75,8 @@ exports.requestRecoverer = (error, req, res, next) => {
         const config = req.requestLoggerConfig;
         const entry = req.requestLogEntry;
         if (config.json === true) {
-            entry.set('stacktrace', error.stack);
-            entry.set('panic', error.message);
+            entry.set('stacktrace', error.stack, false);
+            entry.set('panic', error.message, false);
         }
         else {
             console.log(error.stack);
