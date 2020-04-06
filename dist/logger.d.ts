@@ -10,7 +10,7 @@ export interface Logger {
     config: Config;
     backend: winston.Logger;
     createEntry(defaultPath?: string): LogEntry;
-    write(level: string, message: string, path: string | null, ...fields: object[]): any;
+    write(level: string, message: string, rootFields: object[], pathFields: object[], path: string | null): any;
     log(level: string, message: string, ...fields: object[]): any;
     debug(message: string, ...fields: object[]): any;
     info(message: string, ...fields: object[]): any;
@@ -19,10 +19,11 @@ export interface Logger {
     critical(message: string, ...fields: object[]): any;
 }
 export interface LogEntry {
-    defaultPath: string | null;
-    fields: object;
-    set(k: string, v: any, defaultPath?: boolean): any;
-    get(k: string, defaultPath?: boolean): any;
+    path: string | null;
+    rootFields: object;
+    pathFields: object;
+    set(k: string, v: any, rootField?: boolean): any;
+    get(k: string, rootField?: boolean): any;
     log(level: string, message: string, ...fields: object[]): any;
     debug(message: string, ...fields: object[]): any;
     info(message: string, ...fields: object[]): any;

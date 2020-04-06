@@ -8,33 +8,34 @@ class logger {
         this.backend = backend;
     }
     createEntry(defaultPath) {
-        if (defaultPath === undefined) {
-            defaultPath = defaultFieldsPath;
-        }
         // * null path means default value
         // * '' (empty) path means root
         // * 'something' path means a /something path
+        if (defaultPath === undefined) {
+            defaultPath = defaultFieldsPath;
+        }
         return createLogEntry(this, defaultPath);
     }
-    write(level, message, path, ...fields) {
-        let meta = null;
+    write(level, message, rootFields, pathFields, path) {
+        let meta = rootFields, pathMeta = {};
         let err = null;
-        if (fields && fields.length > 0) {
-            for (let i = 0; i < fields.length; i++) {
-                const field = fields[i];
-                if (field && (field instanceof Error || field.stack)) {
-                    if (level !== 'warn' && level != 'error' && level !== 'critical') {
-                        level = 'error';
-                    }
-                    err = field;
+        for (let i = 0; i < pathFields.length; i++) {
+            const field = pathFields[i];
+            if (field && (field instanceof Error || field.stack)) {
+                if (level !== 'warn' && level != 'error' && level !== 'critical') {
+                    level = 'error';
                 }
-                else {
-                    meta = { ...meta, ...field };
-                }
+                err = field;
             }
-            if (path !== null && path !== '') {
-                meta = { [path]: { ...meta } };
+            else {
+                pathMeta = { ...pathMeta, ...field };
             }
+        }
+        if (path !== null && path !== '') {
+            meta[path] = pathMeta;
+        }
+        else {
+            meta = { ...pathMeta, ...meta };
         }
         if (err !== null) {
             meta['stacktrace'] = err.stack;
@@ -43,7 +44,7 @@ class logger {
         this.backend.log(level, message, meta);
     }
     log(level, message, ...fields) {
-        this.write(level, message, defaultFieldsPath, ...fields);
+        this.write(level, message, {}, fields, defaultFieldsPath);
     }
     debug(message, ...fields) {
         this.log('debug', message, ...fields);
@@ -93,36 +94,35 @@ exports.createLogger = (config) => {
     }
     return new logger(config, backend);
 };
-const createLogEntry = (logger, defaultPath) => {
+const createLogEntry = (logger, path) => {
     return {
-        defaultPath: defaultPath,
-        fields: {},
-        set: function (k, v, defaultPath) {
-            if (defaultPath !== false) {
-                if (!this.fields[this.defaultPath]) {
-                    this.fields[this.defaultPath] = {};
-                }
-                this.fields[this.defaultPath][k] = v;
+        path: path,
+        rootFields: {},
+        pathFields: {},
+        set: function (k, v, rootField) {
+            if (rootField === true) {
+                this.rootFields[k] = v;
             }
             else {
-                this.fields[k] = v;
+                this.pathFields[k] = v;
             }
         },
-        get: function (k, defaultPath) {
-            if (defaultPath !== false) {
-                return this.fields[this.defaultPath][k];
+        get: function (k, rootField) {
+            if (rootField === true) {
+                return this.rootFields[k];
             }
             else {
-                return this.fields[k];
+                return this.pathFields[k];
             }
         },
         log: function (level, message, ...fields) {
-            if (fields && fields.length > 0) {
-                logger.write(level, message, '', ...[this.fields, ...fields]);
+            let pathFields = [];
+            for (let k in this.pathFields) {
+                let v = this.pathFields[k];
+                pathFields.push({ [k]: v });
             }
-            else {
-                logger.write(level, message, '', this.fields);
-            }
+            pathFields = [...pathFields, ...fields];
+            logger.write(level, message, this.rootFields, pathFields, this.path);
         },
         debug: function (message, ...fields) {
             this.log('debug', message, ...fields);

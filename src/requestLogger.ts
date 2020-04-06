@@ -34,7 +34,7 @@ export const requestLogger = (logger: Logger) => (req, res, next) => {
       httpRequest['headers']['set-cookie'] = '***'
     }
 
-    entry.set('httpRequest', httpRequest, false)
+    entry.set('httpRequest', httpRequest, true)
   }
 
   const startAt = process.hrtime()
@@ -53,7 +53,7 @@ export const requestLogger = (logger: Logger) => (req, res, next) => {
       status: res.statusCode,
       elapsed: elapsedMs
     }
-    entry.set('httpResponse', httpResponse, false)
+    entry.set('httpResponse', httpResponse, true)
   }
 
   // Log the request & response
@@ -64,7 +64,6 @@ export const requestLogger = (logger: Logger) => (req, res, next) => {
 
   } else {
     // Concise-mode -- pack the info in this message
-    // message = `${res.statusCode} ${statusLabel(res.statusCode)} - ${req.method} ${req.originalUrl}`
     message = `"${req.method} ${req.originalUrl}" - ${res.statusCode} ${statusLabel(res.statusCode)} in ${elapsedMs}ms`
   }
 
@@ -89,8 +88,8 @@ export const requestRecoverer = (error, req, res, next) => {
     const config = req.requestLoggerConfig
     const entry = req.requestLogEntry
     if (config.json === true) {
-      entry.set('stacktrace', error.stack, false)
-      entry.set('panic', error.message, false)
+      entry.set('stacktrace', error.stack, true)
+      entry.set('panic', error.message, true)
     } else {
       console.log(error.stack)
     }

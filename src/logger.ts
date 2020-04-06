@@ -12,7 +12,7 @@ export interface Logger {
   config: Config
   backend: winston.Logger
   createEntry(defaultPath?: string): LogEntry
-  write(level: string, message: string, path: string | null, ...fields: object[])
+  write(level: string, message: string, rootFields: object[], pathFields: object[], path: string | null)
   log(level: string, message: string, ...fields: object[])
   debug(message: string, ...fields: object[])
   info(message: string, ...fields: object[])
@@ -22,10 +22,11 @@ export interface Logger {
 }
 
 export interface LogEntry {
-  defaultPath: string | null
-  fields: object
-  set(k: string, v: any, defaultPath?: boolean)
-  get(k: string, defaultPath?: boolean): any
+  path: string | null
+  rootFields: object
+  pathFields: object
+  set(k: string, v: any, rootField?: boolean)
+  get(k: string, rootField?: boolean): any
   log(level: string, message: string, ...fields: object[])
   debug(message: string, ...fields: object[])
   info(message: string, ...fields: object[])
@@ -40,43 +41,45 @@ class logger implements Logger {
   constructor(public config: Config, public backend: winston.Logger) {}
 
   createEntry(defaultPath?: string): LogEntry {
-    if (defaultPath === undefined) {
-      defaultPath = defaultFieldsPath
-    }
     // * null path means default value
     // * '' (empty) path means root
     // * 'something' path means a /something path
+    if (defaultPath === undefined) {
+      defaultPath = defaultFieldsPath
+    }
     return createLogEntry(this, defaultPath)
   }
 
-  write(level: string, message: string, path: string | null, ...fields: object[]) {
-    let meta = null
+  write(level: string, message: string, rootFields: object, pathFields: object[], path: string | null) {
+    let meta = rootFields, pathMeta = {}
     let err: Error = null
-    if (fields && fields.length > 0) {
-      for (let i = 0; i < fields.length; i++) {
-        const field = fields[i]
-        if (field && (field instanceof Error || (field as any).stack)) {
-          if (level !== 'warn' && level != 'error' && level !== 'critical') {
-            level = 'error'
-          }
-          err = field as Error
-        } else {
-          meta = { ...meta, ...field }
+
+    for (let i = 0; i < pathFields.length; i++) {
+      const field = pathFields[i]
+      if (field && (field instanceof Error || (field as any).stack)) {
+        if (level !== 'warn' && level != 'error' && level !== 'critical') {
+          level = 'error'
         }
+        err = field as Error
+      } else {
+        pathMeta = { ...pathMeta, ...field }
       }
-      if (path !== null && path !== '') {
-        meta = { [path]: { ...meta } }
-      }
+    }
+    if (path !== null && path !== '') {
+      meta[path] = pathMeta
+    } else {
+      meta = { ...pathMeta, ...meta }
     }
     if (err !== null) {
       meta['stacktrace'] = err.stack
       meta['panic'] = err.message
     }
+
     this.backend.log(level, message, meta)
   }
 
   log(level: string, message: string, ...fields: object[]) {
-    this.write(level, message, defaultFieldsPath, ...fields)
+    this.write(level, message, {}, fields, defaultFieldsPath)
   }
 
   debug(message: string, ...fields: object[]) {
@@ -143,35 +146,39 @@ export const createLogger = (config: Config): Logger => {
   return new logger(config, backend)
 }
 
-const createLogEntry = (logger: Logger, defaultPath: string | null): LogEntry => {
+const createLogEntry = (logger: Logger, path: string | null): LogEntry => {
   return {
-    defaultPath: defaultPath,
-    fields: {},
-    set: function(k: string, v: any, defaultPath?: boolean) {
-      if (defaultPath !== false) {
-        if (!this.fields[this.defaultPath]) {
-          this.fields[this.defaultPath] = {}
-        }
-        this.fields[this.defaultPath][k] = v
+    path: path,
+    rootFields: {},
+    pathFields: {},
+
+    set: function(k: string, v: any, rootField?: boolean) {
+      if (rootField === true) {
+        this.rootFields[k] = v        
       } else {
-        this.fields[k] = v
+        this.pathFields[k] = v
       }
     },
     
-    get: function(k: string, defaultPath?: boolean): any {
-      if (defaultPath !== false) {
-        return this.fields[this.defaultPath][k]
+    get: function(k: string, rootField?: boolean): any {
+      if (rootField === true) {
+        return this.rootFields[k]
       } else {
-        return this.fields[k]
+        return this.pathFields[k]
       }
     },
+
     log: function(level: string, message: string, ...fields: object[]) {
-      if (fields && fields.length > 0) {
-        logger.write(level, message, '', ...[ this.fields, ...fields ])
-      } else {
-        logger.write(level, message, '', this.fields)
+      let pathFields: object[] = []
+      for (let k in this.pathFields) {
+        let v = this.pathFields[k]
+        pathFields.push({ [k]: v })
       }
+      pathFields = [ ...pathFields, ...fields ]
+
+      logger.write(level, message, this.rootFields, pathFields, this.path)
     },
+
     debug: function(message: string, ...fields: object[]) {
       this.log('debug', message, ...fields)
     },
