@@ -19,7 +19,7 @@ exports.requestLogger = (logger) => (req, res, next) => {
         httpRequest['remoteIP'] = (req.headers['x-forwarded-for'] || '').split(',').pop() ||
             req.connection.remoteAddress || req.socket.remoteAddress || req.connection.socket.remoteAddress;
         // Record headers, but clear some values out for safety
-        httpRequest['headers'] = req.headers;
+        httpRequest['headers'] = { ...req.headers };
         if (httpRequest['headers']['authorization'] && httpRequest['headers']['authorization'] !== '') {
             httpRequest['headers']['authorization'] = '***';
         }
