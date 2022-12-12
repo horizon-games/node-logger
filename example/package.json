@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@horizongames/node-logger": "../",
-    "express": "^4.17.1"
+    "express": "^4.17.3"
   },
   "devDependencies": {
     "@types/node": "^13.11.0",
